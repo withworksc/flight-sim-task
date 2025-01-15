@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Commands Generator</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8 text-center">Flight Commands Generator</h1>
+
+        <!-- 初始值輸入 -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Initial Conditions Input</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="p-4 bg-gray-50 rounded">
+                    <p class="font-medium">Altitude (2500-38000):</p>
+                    <input 
+                        type="number" 
+                        id="input-altitude" 
+                        value="10000" 
+                        min="2500" 
+                        max="38000" 
+                        step="100"
+                        class="mt-1 p-2 w-full border rounded text-gray-700"
+                    >
+                    <span class="text-sm text-gray-500">feet</span>
+                </div>
+                <div class="p-4 bg-gray-50 rounded">
+                    <p class="font-medium">Heading (0-360):</p>
+                    <input 
+                        type="number" 
+                        id="input-heading" 
+                        value="360" 
+                        min="0" 
+                        max="360" 
+                        step="1"
+                        class="mt-1 p-2 w-full border rounded text-gray-700"
+                    >
+                    <span class="text-sm text-gray-500">degrees</span>
+                </div>
+                <div class="p-4 bg-gray-50 rounded">
+                    <p class="font-medium">Velocity (160-330):</p>
+                    <input 
+                        type="number" 
+                        id="input-velocity" 
+                        value="250" 
+                        min="160" 
+                        max="330" 
+                        step="10"
+                        class="mt-1 p-2 w-full border rounded text-gray-700"
+                    >
+                    <span class="text-sm text-gray-500">knots</span>
+                </div>
+            </div>
+        </div>
+
+                <!-- Previous Condition -->
+                <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                    <h2 class="text-xl font-semibold mb-4">Previous Conditions</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="p-4 bg-gray-50 rounded">
+                            <p class="font-medium">Altitude:</p>
+                            <p id="prev-altitude">10000 feet</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded">
+                            <p class="font-medium">Heading:</p>
+                            <p id="prev-heading">360 degrees</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded">
+                            <p class="font-medium">Velocity:</p>
+                            <p id="prev-velocity">250 knots</p>
+                        </div>
+                    </div>
+                </div>
+
+        <!-- Commands -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Commands</h2>
+            <div id="commands" class="space-y-4">
+                <!-- Commands will be inserted here -->
+            </div>
+        </div>
+
+
+        <!-- 指令生成按鈕 -->
+        <div class="text-center mb-8">
+            <button id="generateBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+                Generate New Commands
+            </button>
+        </div>
+
+        <!-- Current Condition -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Current Conditions</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="p-4 bg-gray-50 rounded">
+                    <p class="font-medium">Altitude:</p>
+                    <p id="current-altitude">10000 feet</p>
+                </div>
+                <div class="p-4 bg-gray-50 rounded">
+                    <p class="font-medium">Heading:</p>
+                    <p id="current-heading">360 degrees</p>
+                </div>
+                <div class="p-4 bg-gray-50 rounded">
+                    <p class="font-medium">Velocity:</p>
+                    <p id="current-velocity">250 knots</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('generateBtn').addEventListener('click', async () => {
+            try {
+                // 先取得 Previous Condition 的值（如果是第一次，就用輸入值，否則用 Previous 的值）
+                 const prevAlt = document.getElementById('prev-altitude').textContent;
+                 const prevHdg = document.getElementById('prev-heading').textContent;
+                 const prevVel = document.getElementById('prev-velocity').textContent;
+
+            // 如果是第一次生成指令，使用輸入值；否則使用 Previous 的值
+            let currentValues;
+            if (prevAlt === '10000 feet') {  // 判斷是否為初始狀態
+                currentValues = {
+                    altitude: parseInt(document.getElementById('input-altitude').value),
+                    heading: parseInt(document.getElementById('input-heading').value),
+                    velocity: parseInt(document.getElementById('input-velocity').value)
+                };
+            } else {
+                currentValues = {
+                    altitude: parseInt(prevAlt.split(' ')[0]),
+                    heading: parseInt(prevHdg.split(' ')[0]),
+                    velocity: parseInt(prevVel.split(' ')[0])
+                };
+            }
+
+            // 驗證範圍
+            if (currentValues.altitude < 2500 || currentValues.altitude > 38000) {
+                alert('Altitude must be between 2500 and 38000 feet');
+                return;
+            }
+            if (currentValues.heading < 0 || currentValues.heading > 360) {
+                alert('Heading must be between 0 and 360 degrees');
+                return;
+            }
+            if (currentValues.velocity < 160 || currentValues.velocity > 330) {
+                alert('Velocity must be between 160 and 330 knots');
+                return;
+            }
+
+            const button = document.getElementById('generateBtn');
+            button.textContent = 'Generating...';
+            button.disabled = true;
+        
+            const response = await fetch('/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(currentValues)
+            });
+        
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+        
+            const data = await response.json();
+        
+            if (data.error) {
+                throw new Error(data.error);
+            }
+        
+            // 更新 Previous Condition
+            document.getElementById('prev-altitude').textContent = `${currentValues.altitude} feet`;
+            document.getElementById('prev-heading').textContent = `${currentValues.heading} degrees`;
+            document.getElementById('prev-velocity').textContent = `${currentValues.velocity} knots`;
+        
+            // 更新 Current Condition 為新的計算結果
+            document.getElementById('current-altitude').textContent = `${data.initial_conditions.alt} feet`;
+            document.getElementById('current-heading').textContent = `${data.initial_conditions.hdg} degrees`;
+            document.getElementById('current-velocity').textContent = `${data.initial_conditions.velocity} knots`;
+        
+            // Update commands
+            const commandsDiv = document.getElementById('commands');
+            commandsDiv.innerHTML = data.commands
+                .map((cmd) => `
+                    <div class="p-4 bg-gray-50 rounded">
+                        <p>${cmd}</p>
+                    </div>
+                `)
+                .join('');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error: ' + error.message);
+            } finally {
+                const button = document.getElementById('generateBtn');
+                button.textContent = 'Generate New Commands';
+                button.disabled = false;
+            }});
+    </script>
+</body>
+</html>
