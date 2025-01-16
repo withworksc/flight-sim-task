@@ -29,7 +29,7 @@ def generate_turn_command():
         bank = 45
         trn_deg = random.randint(12, 18) * 10
         direction = random.choice(trn_vec)
-        return {'type': 'turn', 'command': f'Steep turn {direction} {trn_deg} degrees from current heading with {bank}° bank angle.', 'direction': direction}
+        return {'type': 'turn', 'command': f'Steep turn {direction} {trn_deg} degrees from current heading.', 'direction': direction}
     else:
         bank_angles = [10, 20, 25, 30]
         bank = random.choice(bank_angles)
