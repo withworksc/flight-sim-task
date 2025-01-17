@@ -111,34 +111,49 @@ def generate_commands(init_value):
     random.shuffle(commands)
     return commands
 
-def update_init_value(commands):
-    """更新初始值"""
+def update_init_value(current_value, commands):
+    """根據指令序列更新值"""
+
     new_value = {
-        'velocity': 250,
-        'hdg': 360,
-        'alt': 10000
+        'alt': current_value['alt'],
+        'hdg': current_value['hdg'],
+        'velocity': current_value['velocity']
     }
-    
+
     for command in commands:
-        if command['type'] == 'velocity':
-            new_value['velocity'] = int(command['command'].split()[-2])
-        elif command['type'] == 'vertical':
+
+        if command['type'] == 'vertical':
             feet = int(command['command'].split()[1])
             if command['action'] == 'Climb':
                 new_value['alt'] += feet
             else:  # Descend
                 new_value['alt'] -= feet
+
         elif command['type'] == 'turn':
-            words = command['command'].split()
-            for word in words:
-                if word.isdigit():
-                    deg = int(word)
-                    break
-            
-            direction = command['direction']
-            if direction == 'right':
-                new_value['hdg'] = (new_value['hdg'] + deg) % 360
-            else:  # left
-                new_value['hdg'] = (new_value['hdg'] - deg) % 360
-    
+            degrees = int(next(word for word in command['command'].split() if word.isdigit()))
+            old_hdg = new_value['hdg']
+            if 'right' in command['command'].lower():
+                new_value['hdg'] = (old_hdg + degrees) % 360
+            else:  # left turn
+                new_value['hdg'] = ((old_hdg - degrees) % 360 + 360) % 360
+
+        elif command['type'] == 'velocity':
+            new_value['velocity'] = int(command['command'].split()[-2])
+
     return new_value
+
+
+# if __name__ == '__main__':
+#     init_value = {
+#         'alt': 10000,
+#         'hdg': 360,
+#         'velocity': 250
+#         }
+#     command_txt = generate_commands(init_value)
+#     print(command_txt)
+#     upt_val = update_init_value(init_value, command_txt)
+#     print(upt_val)
+#     new_cmd_txt = generate_commands(upt_val)
+#     print(new_cmd_txt)
+#     new_updt_val = update_init_value(upt_val, new_cmd_txt)
+#     print(new_updt_val)

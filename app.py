@@ -23,15 +23,16 @@ def generate():
         app.logger.info(f'Received data: {data}')
         
         # 取得初始條件，並提供預設值
-        init_value = {
+        current_value = {
             'alt': data.get('altitude', 10000),
             'hdg': data.get('heading', 360),
             'velocity': data.get('velocity', 250)
         }
 
         # 調用命令生成函數
-        commands = generate_commands(init_value)
-        new_init_value = update_init_value(commands)
+        commands = generate_commands(current_value)
+        # 使用當前值更新到新的狀態
+        new_value = update_init_value(current_value.copy(), commands)
         
         # 提取指令內容
         command_strings = [cmd['command'] for cmd in commands]
@@ -39,7 +40,7 @@ def generate():
         # 準備回應
         response = {
             'commands': command_strings,
-            'initial_conditions': new_init_value
+            'initial_conditions': new_value  # 回傳更新後的值
         }
         app.logger.info(f'Sending response: {response}')
         return jsonify(response)
@@ -48,4 +49,4 @@ def generate():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5500)

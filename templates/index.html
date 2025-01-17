@@ -113,13 +113,13 @@
         document.getElementById('generateBtn').addEventListener('click', async () => {
             try {
                 console.log('Button clicked');  // Debug log
-                
-                // Get values from input fields
-                const altitude = parseInt(document.getElementById('input-altitude').value);
-                const heading = parseInt(document.getElementById('input-heading').value);
-                const velocity = parseInt(document.getElementById('input-velocity').value);
 
-                // Validate input values
+                // Get values from Current Conditions or Input if it's the first run
+                const altitude = parseInt(document.getElementById('current-altitude').textContent || document.getElementById('input-altitude').value);
+                const heading = parseInt(document.getElementById('current-heading').textContent || document.getElementById('input-heading').value);
+                const velocity = parseInt(document.getElementById('current-velocity').textContent || document.getElementById('input-velocity').value);
+
+                // Validate values
                 if (altitude < 2500 || altitude > 38000) {
                     alert('Altitude must be between 2500 and 38000 feet');
                     return;
@@ -138,13 +138,8 @@
                 button.textContent = 'Generating...';
                 button.disabled = true;
 
-                // Update previous conditions with current values
-                document.getElementById('prev-altitude').textContent = document.getElementById('current-altitude').textContent;
-                document.getElementById('prev-heading').textContent = document.getElementById('current-heading').textContent;
-                document.getElementById('prev-velocity').textContent = document.getElementById('current-velocity').textContent;
-
                 // Make API call
-                const response = await fetch('https://flight-sim-task.onrender.com/generate', {
+                const response = await fetch('/generate', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -163,7 +158,12 @@
                 const data = await response.json();
                 console.log('Received data:', data);  // Debug log
 
-                // Update current conditions
+                // Update previous conditions with current values
+                document.getElementById('prev-altitude').textContent = document.getElementById('current-altitude').textContent;
+                document.getElementById('prev-heading').textContent = document.getElementById('current-heading').textContent;
+                document.getElementById('prev-velocity').textContent = document.getElementById('current-velocity').textContent;
+
+                // Update current conditions with new values from API
                 document.getElementById('current-altitude').textContent = `${data.initial_conditions.alt} feet`;
                 document.getElementById('current-heading').textContent = `${data.initial_conditions.hdg} degrees`;
                 document.getElementById('current-velocity').textContent = `${data.initial_conditions.velocity} knots`;
