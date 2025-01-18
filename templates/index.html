@@ -10,8 +10,14 @@
     <div class="container mx-auto px-4 py-8">
         <h1 class="text-3xl font-bold mb-8 text-center">Flight Commands Generator</h1>
 
+        <!-- Initial Conditions Input -->
         <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <h2 class="text-xl font-semibold mb-4">Initial Conditions Input</h2>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Initial Conditions Input</h2>
+                <button id="resetBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded hidden">
+                    Reset Input
+                </button>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="p-4 bg-gray-50 rounded">
                     <p class="font-medium">Altitude (2500-38000):</p>
@@ -60,16 +66,16 @@
             <h2 class="text-xl font-semibold mb-4">Previous Conditions</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="p-4 bg-gray-50 rounded">
-                    <p class="font-medium">Altitude:</p>
-                    <p id="prev-altitude">10000 feet</p>
+                    <p class="font-medium">Previous Altitude:</p>
+                    <p id="prev-altitude">-</p>
                 </div>
                 <div class="p-4 bg-gray-50 rounded">
-                    <p class="font-medium">Heading:</p>
-                    <p id="prev-heading">360 degrees</p>
+                    <p class="font-medium">Previous Heading:</p>
+                    <p id="prev-heading">-</p>
                 </div>
                 <div class="p-4 bg-gray-50 rounded">
-                    <p class="font-medium">Velocity:</p>
-                    <p id="prev-velocity">250 knots</p>
+                    <p class="font-medium">Previous Velocity:</p>
+                    <p id="prev-velocity">-</p>
                 </div>
             </div>
         </div>
@@ -95,99 +101,130 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="p-4 bg-gray-50 rounded">
                     <p class="font-medium">Altitude:</p>
-                    <p id="current-altitude">10000 feet</p>
+                    <p id="current-altitude">-</p>
                 </div>
                 <div class="p-4 bg-gray-50 rounded">
                     <p class="font-medium">Heading:</p>
-                    <p id="current-heading">360 degrees</p>
+                    <p id="current-heading">-</p>
                 </div>
                 <div class="p-4 bg-gray-50 rounded">
                     <p class="font-medium">Velocity:</p>
-                    <p id="current-velocity">250 knots</p>
+                    <p id="current-velocity">-</p>
                 </div>
             </div>
         </div>
     </div>
-
     <script>
-        document.getElementById('generateBtn').addEventListener('click', async () => {
-            try {
-                console.log('Button clicked');  // Debug log
+    // 獲取所有輸入元素和按鈕
+    const inputAltitude = document.getElementById('input-altitude');
+    const inputHeading = document.getElementById('input-heading');
+    const inputVelocity = document.getElementById('input-velocity');
+    const generateBtn = document.getElementById('generateBtn');
+    const resetBtn = document.getElementById('resetBtn');
 
-                // Get values from Current Conditions or Input if it's the first run
-                const altitude = parseInt(document.getElementById('current-altitude').textContent || document.getElementById('input-altitude').value);
-                const heading = parseInt(document.getElementById('current-heading').textContent || document.getElementById('input-heading').value);
-                const velocity = parseInt(document.getElementById('current-velocity').textContent || document.getElementById('input-velocity').value);
+    // 保存初始值
+    const initialValues = {
+        altitude: inputAltitude.value,
+        heading: inputHeading.value,
+        velocity: inputVelocity.value
+    };
 
-                // Validate values
-                if (altitude < 2500 || altitude > 38000) {
-                    alert('Altitude must be between 2500 and 38000 feet');
-                    return;
-                }
-                if (heading < 0 || heading > 360) {
-                    alert('Heading must be between 0 and 360 degrees');
-                    return;
-                }
-                if (velocity < 160 || velocity > 330) {
-                    alert('Velocity must be between 160 and 330 knots');
-                    return;
-                }
+    // 禁用所有輸入
+    function disableInputs() {
+        inputAltitude.disabled = true;
+        inputHeading.disabled = true;
+        inputVelocity.disabled = true;
+        inputAltitude.classList.add('bg-gray-100');
+        inputHeading.classList.add('bg-gray-100');
+        inputVelocity.classList.add('bg-gray-100');
+        resetBtn.classList.remove('hidden');
+    }
 
-                // Disable button and show loading state
-                const button = document.getElementById('generateBtn');
-                button.textContent = 'Generating...';
-                button.disabled = true;
+    // 重置所有輸入
+    function resetInputs() {
+        inputAltitude.disabled = false;
+        inputHeading.disabled = false;
+        inputVelocity.disabled = false;
+        inputAltitude.classList.remove('bg-gray-100');
+        inputHeading.classList.remove('bg-gray-100');
+        inputVelocity.classList.remove('bg-gray-100');
+        inputAltitude.value = initialValues.altitude;
+        inputHeading.value = initialValues.heading;
+        inputVelocity.value = initialValues.velocity;
+        resetBtn.classList.add('hidden');
+        // 清除當前和之前的條件
+        document.getElementById('current-altitude').textContent = '-';
+        document.getElementById('current-heading').textContent = '-';
+        document.getElementById('current-velocity').textContent = '-';
+        document.getElementById('prev-altitude').textContent = '-';
+        document.getElementById('prev-heading').textContent = '-';
+        document.getElementById('prev-velocity').textContent = '-';
+        // 清除命令
+        document.getElementById('commands').innerHTML = '';
+    }
 
-                // Make API call
-                const response = await fetch('/generate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        altitude: altitude,
-                        heading: heading,
-                        velocity: velocity
-                    })
-                });
+    // 重置按鈕事件監聽器
+    resetBtn.addEventListener('click', resetInputs);
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+    // 生成按鈕事件監聽器
+    generateBtn.addEventListener('click', async () => {
+        try {
+            // 獲取當前值或初始輸入值
+            const currentAlt = document.getElementById('current-altitude').textContent;
+            const currentHdg = document.getElementById('current-heading').textContent;
+            const currentVel = document.getElementById('current-velocity').textContent;
 
-                const data = await response.json();
-                console.log('Received data:', data);  // Debug log
+            let altitude, heading, velocity;
 
-                // Update previous conditions with current values
-                document.getElementById('prev-altitude').textContent = document.getElementById('current-altitude').textContent;
-                document.getElementById('prev-heading').textContent = document.getElementById('current-heading').textContent;
-                document.getElementById('prev-velocity').textContent = document.getElementById('current-velocity').textContent;
-
-                // Update current conditions with new values from API
-                document.getElementById('current-altitude').textContent = `${data.initial_conditions.alt} feet`;
-                document.getElementById('current-heading').textContent = `${data.initial_conditions.hdg} degrees`;
-                document.getElementById('current-velocity').textContent = `${data.initial_conditions.velocity} knots`;
-
-                // Update commands display
-                const commandsDiv = document.getElementById('commands');
-                commandsDiv.innerHTML = data.commands
-                    .map(cmd => `
-                        <div class="p-4 bg-gray-50 rounded">
-                            <p>${cmd}</p>
-                        </div>
-                    `)
-                    .join('');
-
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error: ' + error.message);
-            } finally {
-                // Reset button state
-                const button = document.getElementById('generateBtn');
-                button.textContent = 'Generate New Commands';
-                button.disabled = false;
+            // 如果是第一次生成，使用輸入值；否則使用當前值
+            if (currentAlt === '-' || currentAlt === '') {
+                altitude = parseInt(document.getElementById('input-altitude').value);
+                heading = parseInt(document.getElementById('input-heading').value);
+                velocity = parseInt(document.getElementById('input-velocity').value);
+            } else {
+                altitude = parseInt(currentAlt);
+                heading = parseInt(currentHdg);
+                velocity = parseInt(currentVel);
             }
-        });
+
+            // 發送請求到後端
+            const response = await fetch('/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ altitude, heading, velocity })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // 更新 Previous Conditions
+            document.getElementById('prev-altitude').textContent = `${altitude} feet`;
+            document.getElementById('prev-heading').textContent = `${heading} degrees`;
+            document.getElementById('prev-velocity').textContent = `${velocity} knots`;
+
+            // 更新 Current Conditions
+            document.getElementById('current-altitude').textContent = data.initial_conditions.alt;
+            document.getElementById('current-heading').textContent = data.initial_conditions.hdg;
+            document.getElementById('current-velocity').textContent = data.initial_conditions.velocity;
+
+            // 更新 Commands 顯示
+            const commandsDiv = document.getElementById('commands');
+            commandsDiv.innerHTML = data.commands.map(cmd => `
+                <div class="p-4 bg-gray-50 rounded">${cmd}</div>
+            `).join('');
+            
+            // 禁用輸入
+            disableInputs();
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred: ' + error.message);
+        }
+    });
     </script>
 </body>
-</html>
+</html

@@ -6,44 +6,64 @@ import logging
 app = Flask(__name__, template_folder='templates', static_folder='static')
 CORS(app)
 
-# 設置日誌
+# 初始化日誌
 logging.basicConfig(level=logging.INFO)
+
+# 驗證輸入值的函數
+def validate_input(value):
+    if not isinstance(value.get('alt'), (int, float)) or not (2500 <= value['alt'] <= 38000):
+        raise ValueError("Altitude must be between 2500 and 38000 feet")
+    if not isinstance(value.get('hdg'), (int, float)) or not (0 <= value['hdg'] <= 360):
+        raise ValueError("Heading must be between 0 and 360 degrees")
+    if not isinstance(value.get('velocity'), (int, float)) or not (160 <= value['velocity'] <= 330):
+        raise ValueError("Velocity must be between 160 and 330 knots")
+    return True
 
 @app.route('/')
 def home():
     app.logger.info('Home route accessed')
-    # 返回 index.html 作為首頁
     return render_template('index.html')
 
 @app.route('/generate', methods=['POST'])
 def generate():
     app.logger.info('Generate endpoint accessed')
+    
     try:
         data = request.get_json()
         app.logger.info(f'Received data: {data}')
         
-        # 取得初始條件，並提供預設值
-        current_value = {
-            'alt': data.get('altitude', 10000),
-            'hdg': data.get('heading', 360),
-            'velocity': data.get('velocity', 250)
+        # 構建初始值
+        init_value = {
+            'alt': int(data.get('altitude')),
+            'hdg': int(data.get('heading')),
+            'velocity': int(data.get('velocity'))
         }
-
-        # 調用命令生成函數
-        commands = generate_commands(current_value)
-        # 使用當前值更新到新的狀態
-        new_value = update_init_value(current_value.copy(), commands)
         
-        # 提取指令內容
-        command_strings = [cmd['command'] for cmd in commands]
+        # 驗證輸入值
+        validate_input(init_value)
         
-        # 準備回應
+        app.logger.info(f"Initial values: {init_value}")
+        
+        # 生成指令
+        commands = generate_commands(init_value)
+        
+        # 更新當前條件
+        new_conditions = update_init_value(init_value.copy(), commands)
+        
+        # 驗證更新後的值
+        validate_input(new_conditions)
+        
         response = {
-            'commands': command_strings,
-            'initial_conditions': new_value  # 回傳更新後的值
+            'commands': [cmd['command'] for cmd in commands],
+            'initial_conditions': new_conditions
         }
+        
         app.logger.info(f'Sending response: {response}')
         return jsonify(response)
+        
+    except ValueError as ve:
+        app.logger.error(f'Validation error: {str(ve)}')
+        return jsonify({'error': str(ve)}), 400
     except Exception as e:
         app.logger.error(f'Error: {str(e)}')
         return jsonify({'error': str(e)}), 500

@@ -3,7 +3,13 @@ from collections import Counter
 
 def generate_vertical_command(init_value):
     ver_vec = ['Climb', 'Descend']
-    command_type = random.choice(ver_vec)
+    if init_value['alt'] >= 38000:
+        command_type = 'Descend'
+    elif init_value['alt'] <= 2500:
+        command_type = 'Climb'
+    else:
+        command_type = random.choice(ver_vec)
+        
     if command_type == 'Climb':
         # calculate maximum alt（alt no greater than 38000 ft and the magnititude is not greater than 3000ft）
         max_climb = min((38000 - init_value['alt']) // 500, 6)  # 6*500 = 3000ft
@@ -42,51 +48,46 @@ def generate_turn_command():
         direction = random.choice(trn_vec)
         return {'type': 'turn', 'command': f'Turn {direction} {trn_deg} degrees from current heading with {bank}° bank angle.', 'direction': direction}
 
-def generate_velocity_command(init_value, prev_velocity_command=None):
-    if prev_velocity_command is None:
-        velocity_vec = ['Accelerate', 'Decelerate']
+
+def generate_velocity_command(init_value):
+    velocity_vec = ['Accelerate', 'Decelerate']
+    
+    # 先檢查速度是否在邊界
+    if init_value['velocity'] >= 330:
+        command_type = 'Decelerate'
+    elif init_value['velocity'] <= 160:
+        command_type = 'Accelerate'
+    else:
         command_type = random.choice(velocity_vec)
         
-        if command_type == 'Accelerate':
-            max_increase = min((330 - init_value['velocity']) // 10, 10)
-            min_increase = 2
-            if max_increase < min_increase:
-                velocity_kt = init_value['velocity']
-            else:
-                velocity_kt = init_value['velocity'] + random.randint(min_increase, max_increase) * 10
+    # 根據命令類型計算速度變化
+    if command_type == 'Accelerate':
+        # 計算最大加速幅度（不超過330且單次不超過100節）
+        max_increase = min((330 - init_value['velocity']) // 10, 10)  # 10*10 = 100節
+        min_increase = 2  # 2*10 = 20節
+        if max_increase < min_increase:
+            command_type = 'Decelerate'  # 如果無法加速，則改為減速
+            max_decrease, min_decrease = 10, 2
+            velocity_kt = init_value['velocity'] - random.randint(min_decrease, max_decrease) * 10
         else:
-            max_decrease = min((init_value['velocity'] - 160) // 10, 10)
-            min_decrease = 2
-            if max_decrease < min_decrease:
-                velocity_kt = init_value['velocity']
-            else:
-                velocity_kt = init_value['velocity'] - random.randint(min_decrease, max_decrease) * 10
-    else:
-        prev_velocity = int(prev_velocity_command['command'].split()[-2])
-        
-        if prev_velocity_command['action'] == 'Accelerate':
-            command_type = 'Decelerate'
-            max_decrease = min((prev_velocity - 160) // 10, 10)
-            min_decrease = 2
-            if max_decrease < min_decrease:
-                velocity_kt = prev_velocity
-            else:
-                velocity_kt = prev_velocity - random.randint(min_decrease, max_decrease) * 10
+            velocity_kt = init_value['velocity'] + random.randint(min_increase, max_increase) * 10
+    else:  # Decelerate
+        # 計算最大減速幅度（不低於160且單次不超過100節）
+        max_decrease = min((init_value['velocity'] - 160) // 10, 10)  # 10*10 = 100節
+        min_decrease = 2  # 2*10 = 20節
+        if max_decrease < min_decrease:
+            command_type = 'Accelerate'  # 如果無法減速，則改為加速
+            max_increase, min_increase = 10, 2
+            velocity_kt = init_value['velocity'] + random.randint(min_increase, max_increase) * 10
         else:
-            command_type = 'Accelerate'
-            max_increase = min((330 - prev_velocity) // 10, 10)
-            min_increase = 2
-            if max_increase < min_increase:
-                velocity_kt = prev_velocity
-            else:
-                velocity_kt = prev_velocity + random.randint(min_increase, max_increase) * 10
+            velocity_kt = init_value['velocity'] - random.randint(min_decrease, max_decrease) * 10
     
-    return {'type': 'velocity', 'command': f'{command_type} to {velocity_kt} knots.', 'action': command_type}
+    return {'type': 'velocity', 'command': f'{command_type} to {velocity_kt} knots.','action': command_type}
 
 
 def arrange_commands(commands):
     """
-    logic：
+    logic:
     1. check if there are triple commands. if affirmative, then put them in #1, #3, #5
     2. if not, reorder the commands and avoid consecutive commands 
     """
@@ -128,10 +129,8 @@ def arrange_commands(commands):
         while remaining:
             valid_cmds = [cmd for cmd in remaining if cmd['type'] != result[-1]['type']]
             if valid_cmds:
-                # 如果有可選的指令，隨機選取
                 next_cmd = random.choice(valid_cmds)
             else:
-                # 如果沒有可選的指令，從剩下的指令中隨機選擇一個
                 next_cmd = remaining[0]
 
             result.append(next_cmd)
