@@ -9,7 +9,9 @@ def generate_vertical_command(init_value):
         max_climb = min((38000 - init_value['alt']) // 500, 6)  # 6*500 = 3000ft
         min_climb = 1  # 1*500 = 500ft
         if max_climb < min_climb:
-            ver_ft = 0
+            command_type = 'Descend'
+            max_descend, min_descend = 6, 1
+            ver_ft = random.randint(min_descend, max_descend) * 500
         else:
             ver_ft = random.randint(min_climb, max_climb) * 500
     else:
@@ -17,13 +19,15 @@ def generate_vertical_command(init_value):
         max_descend = min((init_value['alt'] - 2500) // 500, 6)  # 6*500 = 3000ft
         min_descend = 1  # 1*500 = 500ft
         if max_descend < min_descend:
-            ver_ft = 0
+            command_type = 'Climb'
+            max_climb, min_climb = 6, 1
+            ver_ft = random.randint(min_climb, max_climb) * 500
         else:
-            ver_ft = -random.randint(min_descend, max_descend) * 500
+            ver_ft = random.randint(min_descend, max_descend) * 500
     
-    return {'type': 'vertical', 'command': f'{command_type} {abs(ver_ft)} feet from current altitude.', 'action': command_type}
+    return {'type': 'vertical', 'command': f'{command_type} {ver_ft} feet from current altitude.', 'action': command_type}
 
-def generate_turn_command(x = None):
+def generate_turn_command():
     trn_vec = ['left', 'right']
     
     if random.random() < 0.2:
@@ -87,7 +91,9 @@ def arrange_commands(commands):
     2. if not, reorder the commands and avoid consecutive commands 
     """
     
+    print([cmd['type'] for cmd in commands])
     type_count = Counter(cmd['type'] for cmd in commands)
+    print(type_count)
     
     
     triple_type = next((cmd_type for cmd_type, count in type_count.items() if count >= 3), None)
@@ -114,40 +120,31 @@ def arrange_commands(commands):
         remaining = commands.copy()
         
         first_cmd = random.choice(remaining)
+        print(first_cmd['type'])
         result.append(first_cmd)
         remaining.remove(first_cmd)
-        
-        # remaining commands
+
+
         while remaining:
             valid_cmds = [cmd for cmd in remaining if cmd['type'] != result[-1]['type']]
-            next_cmd = random.choice(valid_cmds)
+            if valid_cmds:
+                # 如果有可選的指令，隨機選取
+                next_cmd = random.choice(valid_cmds)
+            else:
+                # 如果沒有可選的指令，從剩下的指令中隨機選擇一個
+                next_cmd = remaining[0]
+
             result.append(next_cmd)
             remaining.remove(next_cmd)
         
+        # # remaining commands
+        # while remaining:
+        #     valid_cmds = [cmd for cmd in remaining if cmd['type'] != result[-1]['type']]
+        #     next_cmd = random.choice(valid_cmds)
+        #     result.append(next_cmd)
+        #     remaining.remove(next_cmd)
+        
         return result
-
-def generate_commands(init_value):
-    
-    random_commands = random.choice([
-            lambda: generate_vertical_command(init_value),
-            lambda: generate_velocity_command(init_value),
-            lambda: generate_turn_command()
-        ])
-
-    commands = []
-
-    commands.append(generate_velocity_command(init_value))
-    commands.append(generate_vertical_command(init_value))
-    commands.append(generate_turn_command())
-    
-    commands.append(random_commands())
-    commands.append(random_commands())
-
-    new_commands = arrange_commands(commands)
-    
-    # print([x['type'] for x in new_commands])
-
-    return new_commands
 
 def update_init_value(current_value, commands):
     """update params"""
@@ -181,6 +178,61 @@ def update_init_value(current_value, commands):
     return new_value
 
 
+def generate_commands(init_value):
+    interim_update = init_value.copy() 
+    commands = []
+
+    required_commands = [
+        lambda: generate_vertical_command(interim_update),
+        lambda: generate_turn_command(),
+        lambda: generate_velocity_command(interim_update)
+    ]
+    
+    for generator in required_commands:
+        command = generator()
+        print(f"Generated command: {command}")
+        commands.append(command)
+        interim_update = update_init_value(interim_update, [command])
+        print(f"Interim state: {interim_update}")
+    
+    while len(commands) < 5:
+        command = random.choice([
+            lambda: generate_vertical_command(interim_update),
+            lambda: generate_velocity_command(interim_update),
+            lambda: generate_turn_command()
+        ])()
+        print(f'Generated command: {command}')
+        commands.append(command)
+        interim_update = update_init_value(interim_update, [command])
+        print(f'Interim state: {interim_update}')
+    
+    new_commands = arrange_commands(commands)
+    print(f'Arranged commands: {new_commands}')
+    return new_commands
+
+# def generate_commands(init_value):
+    
+#     random_commands = random.choice([
+#             lambda: generate_vertical_command(init_value),
+#             lambda: generate_velocity_command(init_value),
+#             lambda: generate_turn_command()
+#         ])
+
+#     commands = []
+
+#     commands.append(generate_velocity_command(init_value))
+#     commands.append(generate_vertical_command(init_value))
+#     commands.append(generate_turn_command())
+    
+#     commands.append(random_commands())
+#     commands.append(random_commands())
+
+#     new_commands = arrange_commands(commands)
+    
+#     # print([x['type'] for x in new_commands])
+
+#     return new_commands
+
 # if __name__ == '__main__':
 #     init_value = {
 #         'alt': 10000,
@@ -189,8 +241,9 @@ def update_init_value(current_value, commands):
 #         }
     
 #     i = 0
-#     while i < 2:
+#     while i < 1E10:
 #         command_txt = generate_commands(init_value)
 #         init_value = update_init_value(init_value, command_txt)
 #         i += 1
+#     print(i)
 
