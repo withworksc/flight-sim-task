@@ -22,7 +22,7 @@ def generate_vertical_command(init_value):
     
     return {'type': 'vertical', 'command': f'{command_type} {abs(ver_ft)} feet from current altitude.', 'action': command_type}
 
-def generate_turn_command():
+def generate_turn_command(x = None):
     trn_vec = ['left', 'right']
     
     if random.random() < 0.2:
@@ -78,7 +78,16 @@ def generate_velocity_command(init_value, prev_velocity_command=None):
     
     return {'type': 'velocity', 'command': f'{command_type} to {velocity_kt} knots.', 'action': command_type}
 
+
+
 def generate_commands(init_value):
+    
+    vertical_or_turn = random.choice([
+            lambda: generate_vertical_command(init_value),
+            lambda: generate_turn_command()
+        ])
+
+
     commands = []
     
     if random.random() <= 0.4:
@@ -87,10 +96,7 @@ def generate_commands(init_value):
         commands.append(generate_turn_command())
         commands.append(generate_vertical_command(init_value))
 
-        vertical_or_turn = random.choice([
-            lambda: generate_vertical_command(init_value),
-            lambda: generate_turn_command()
-        ])
+        
         commands.append(vertical_or_turn())
         commands.append(vertical_or_turn())
     else:
@@ -102,13 +108,38 @@ def generate_commands(init_value):
         
         commands.append(generate_turn_command())
         commands.append(generate_vertical_command(init_value))
-        vertical_or_turn = random.choice([
-            lambda: generate_vertical_command(init_value),
-            lambda: generate_turn_command()
-        ])
         commands.append(vertical_or_turn())
     
     random.shuffle(commands)
+
+    for i in range(1, len(commands)):
+        tmp = None
+        if i == 0:
+            continue
+
+        if i < len(commands) - 1:
+            if commands[i]['type'] == commands[i-1]['type']:
+                tmp = commands[i]
+                commands[i] = commands[i+1]
+                commands[i+1] = tmp
+
+        if i == len(commands) - 1:
+            if commands[i]['type'] == commands[i-1]['type']:
+                prev_type = commands[i - 1]['type']
+                commands.pop()
+
+                remaining_types = {
+                    'turn': lambda: generate_velocity_command(init_value),
+                    'velocity': lambda: generate_vertical_command(init_value),
+                    'vertical': lambda: generate_turn_command()
+                }
+
+                replacing_command_function = random.choice([
+                    func for key, func in remaining_types.items() if key != prev_type
+                ])
+                replacing_command = replacing_command_function()
+                commands.append(replacing_command)
+
     return commands
 
 def update_init_value(current_value, commands):
@@ -143,17 +174,17 @@ def update_init_value(current_value, commands):
     return new_value
 
 
-# if __name__ == '__main__':
-#     init_value = {
-#         'alt': 10000,
-#         'hdg': 360,
-#         'velocity': 250
-#         }
-#     command_txt = generate_commands(init_value)
-#     print(command_txt)
-#     upt_val = update_init_value(init_value, command_txt)
-#     print(upt_val)
-#     new_cmd_txt = generate_commands(upt_val)
-#     print(new_cmd_txt)
-#     new_updt_val = update_init_value(upt_val, new_cmd_txt)
-#     print(new_updt_val)
+if __name__ == '__main__':
+    init_value = {
+        'alt': 10000,
+        'hdg': 360,
+        'velocity': 250
+        }
+    command_txt = generate_commands(init_value)
+    print(command_txt)
+    upt_val = update_init_value(init_value, command_txt)
+    print(upt_val)
+    new_cmd_txt = generate_commands(upt_val)
+    print(new_cmd_txt)
+    new_updt_val = update_init_value(upt_val, new_cmd_txt)
+    print(new_updt_val)
