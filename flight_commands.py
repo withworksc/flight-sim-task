@@ -1,10 +1,11 @@
 import random
+from collections import Counter
 
 def generate_vertical_command(init_value):
     ver_vec = ['Climb', 'Descend']
     command_type = random.choice(ver_vec)
     if command_type == 'Climb':
-        # 計算最大可爬升高度（不超過高度38000ft且不超過幅度3000）
+        # calculate maximum alt（alt no greater than 38000 ft and the magnititude is not greater than 3000ft）
         max_climb = min((38000 - init_value['alt']) // 500, 6)  # 6*500 = 3000ft
         min_climb = 1  # 1*500 = 500ft
         if max_climb < min_climb:
@@ -12,7 +13,7 @@ def generate_vertical_command(init_value):
         else:
             ver_ft = random.randint(min_climb, max_climb) * 500
     else:
-        # 計算最大可下降高度（不低於高度2500ft且不超過3000）
+        # calculate minimum alt（alt no less than 2500 ft and the magnititude is not greater than 3000ft）
         max_descend = min((init_value['alt'] - 2500) // 500, 6)  # 6*500 = 3000ft
         min_descend = 1  # 1*500 = 500ft
         if max_descend < min_descend:
@@ -79,6 +80,51 @@ def generate_velocity_command(init_value, prev_velocity_command=None):
     return {'type': 'velocity', 'command': f'{command_type} to {velocity_kt} knots.', 'action': command_type}
 
 
+def arrange_commands(commands):
+    """
+    logic：
+    1. check if there are triple commands. if affirmative, then put them in #1, #3, #5
+    2. if not, reorder the commands and avoid consecutive commands 
+    """
+    
+    type_count = Counter(cmd['type'] for cmd in commands)
+    
+    
+    triple_type = next((cmd_type for cmd_type, count in type_count.items() if count >= 3), None)
+    
+    if triple_type:
+        # if there are triple commands, put them in #1, #3, #5
+        same_type_cmds = [cmd for cmd in commands if cmd['type'] == triple_type][:3]
+        other_cmds = [cmd for cmd in commands if cmd['type'] != triple_type]
+        
+        result = [None] * 5
+        result[0] = same_type_cmds[0]  
+        result[2] = same_type_cmds[1]  
+        result[4] = same_type_cmds[2]  
+        
+        # for #2 and #4, the commands are random
+        random.shuffle(other_cmds)
+        result[1] = other_cmds[0]  
+        result[3] = other_cmds[1]  
+        
+        return result
+    else:
+        # reorder the commands and avoid consecutive commands 
+        result = []
+        remaining = commands.copy()
+        
+        first_cmd = random.choice(remaining)
+        result.append(first_cmd)
+        remaining.remove(first_cmd)
+        
+        # remaining commands
+        while remaining:
+            valid_cmds = [cmd for cmd in remaining if cmd['type'] != result[-1]['type']]
+            next_cmd = random.choice(valid_cmds)
+            result.append(next_cmd)
+            remaining.remove(next_cmd)
+        
+        return result
 
 def generate_commands(init_value):
     
@@ -86,7 +132,6 @@ def generate_commands(init_value):
             lambda: generate_vertical_command(init_value),
             lambda: generate_turn_command()
         ])
-
 
     commands = []
     
@@ -109,41 +154,15 @@ def generate_commands(init_value):
         commands.append(generate_turn_command())
         commands.append(generate_vertical_command(init_value))
         commands.append(vertical_or_turn())
+
+    new_commands = arrange_commands(commands)
     
-    random.shuffle(commands)
+    # print([x['type'] for x in new_commands])
 
-    for i in range(1, len(commands)):
-        tmp = None
-        if i == 0:
-            continue
-
-        if i < len(commands) - 1:
-            if commands[i]['type'] == commands[i-1]['type']:
-                tmp = commands[i]
-                commands[i] = commands[i+1]
-                commands[i+1] = tmp
-
-        if i == len(commands) - 1:
-            if commands[i]['type'] == commands[i-1]['type']:
-                prev_type = commands[i - 1]['type']
-                commands.pop()
-
-                remaining_types = {
-                    'turn': lambda: generate_velocity_command(init_value),
-                    'velocity': lambda: generate_vertical_command(init_value),
-                    'vertical': lambda: generate_turn_command()
-                }
-
-                replacing_command_function = random.choice([
-                    func for key, func in remaining_types.items() if key != prev_type
-                ])
-                replacing_command = replacing_command_function()
-                commands.append(replacing_command)
-
-    return commands
+    return new_commands
 
 def update_init_value(current_value, commands):
-    """根據指令序列更新值"""
+    """update params"""
 
     new_value = {
         'alt': current_value['alt'],
@@ -174,17 +193,16 @@ def update_init_value(current_value, commands):
     return new_value
 
 
-if __name__ == '__main__':
-    init_value = {
-        'alt': 10000,
-        'hdg': 360,
-        'velocity': 250
-        }
-    command_txt = generate_commands(init_value)
-    print(command_txt)
-    upt_val = update_init_value(init_value, command_txt)
-    print(upt_val)
-    new_cmd_txt = generate_commands(upt_val)
-    print(new_cmd_txt)
-    new_updt_val = update_init_value(upt_val, new_cmd_txt)
-    print(new_updt_val)
+# if __name__ == '__main__':
+#     init_value = {
+#         'alt': 10000,
+#         'hdg': 360,
+#         'velocity': 250
+#         }
+    
+#     i = 0
+#     while i < 2:
+#         command_txt = generate_commands(init_value)
+#         init_value = update_init_value(init_value, command_txt)
+#         i += 1
+
