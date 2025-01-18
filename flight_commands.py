@@ -128,32 +128,20 @@ def arrange_commands(commands):
 
 def generate_commands(init_value):
     
-    vertical_or_turn = random.choice([
+    random_commands = random.choice([
             lambda: generate_vertical_command(init_value),
+            lambda: generate_velocity_command(init_value),
             lambda: generate_turn_command()
         ])
 
     commands = []
-    
-    if random.random() <= 0.4:
-        velocity = generate_velocity_command(init_value)
-        commands.append(velocity)
-        commands.append(generate_turn_command())
-        commands.append(generate_vertical_command(init_value))
 
-        
-        commands.append(vertical_or_turn())
-        commands.append(vertical_or_turn())
-    else:
-        first_velocity = generate_velocity_command(init_value)
-        commands.append(first_velocity)
-        
-        second_velocity = generate_velocity_command(init_value, first_velocity)
-        commands.append(second_velocity)
-        
-        commands.append(generate_turn_command())
-        commands.append(generate_vertical_command(init_value))
-        commands.append(vertical_or_turn())
+    commands.append(generate_velocity_command(init_value))
+    commands.append(generate_vertical_command(init_value))
+    commands.append(generate_turn_command())
+    
+    commands.append(random_commands())
+    commands.append(random_commands())
 
     new_commands = arrange_commands(commands)
     
